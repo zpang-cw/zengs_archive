@@ -137,6 +137,7 @@ kgdvc() {
 
 # RETRIEVE A GBX RACK'S LIST OF BMN NAMES
 # TO-DO - GET A RACK'S NODE SERIALS VIA `-s OR --serial` FLAG
+# TO-DO - OUTPUT NODE STATES RATHER THAN JUST NAME
 racknodes() {
 
   if [ $# -lt 1 ]; then
@@ -150,6 +151,23 @@ racknodes() {
   fi
 
   cwctl describe rack $1 --sections=bmns | sed -e '1,/----/ d' | awk "{print \$1}"
+
+}
+
+# TEMPORARY FUNCTION (NEED TO MERGE WITH `racknodes()`
+rackstate() {
+
+  if [ $# -lt 1 ]; then
+    echo '[Usage]: racknodes <rack>'
+    return 1
+
+  elif [ $# -gt 1 ]; then
+    echo '[Error] this function only takes 1 input argument :)'
+    return 1
+
+  fi
+
+  cwctl describe rack $1 --sections=bmns
 
 }
 
