@@ -217,3 +217,75 @@ bmn_status() {
   done
 
 }
+
+
+# FUNCTION TO SERVE AS SHORT-HAND FOR SENDING NODE TO VARIOUS GBX WORKFLOW STATES
+gbx_send() {
+
+  if [ $# -lt 1 ]; then
+
+    echo '[Usage]: gbx_send <--provision/--node-zap/--dpu-zap/--l12-seatrial> <bmn1> ... <bmnN>'
+    return 1
+
+  fi
+
+  zparseopts -E -D  -- \
+    -provision=provision_flag \
+    -node-zap=nodezap_flag \
+    -dpu-zap=dpuzap_flag \
+    -l12-seatrial=l12seatrial_flag \
+    || return 1
+
+# ONLY ALLOW USER TO SPECIFY ONE OPTION EACH CALL
+# TO-DO - ALLOW `--dryrun` FLAG - ONLY PRINTS STAGED COMMAND RATHER THAN EXECUTING IT
+
+  local oCounter=0
+
+  for o in provision_flag nodezap_flag dpuzap_flag l12seatrial_flag; do if (( ${(P)#o} )); then (( oCounter++ )) fi; done
+
+  if (( oCounter > 1 )); then
+
+    echo '[Error]: only specify one option at a time :)'
+    return 1
+
+  elif (( oCounter == 0 )); then
+
+    echo '[Error]: no flags/options given!'
+    echo '[Hint]: <--provision/--node-zap/--dpu-zap/--l12-seatrial>'
+    return 1
+
+  fi
+
+# ISOLATE INPUT POSITIONAL ARGUMENTS (`zparseopts` ALREADY TRIMS OFF OPTIONS/FLAGS INPUT ARGS)
+  local positionalArgs=( "$@" )
+# REMOVE DUPLICATE POSITIONAL ARGS
+  typeset -U positionalArgs
+# CHECK IF ARRAY IS EMPTY
+  if [[ -z $positionalArgs ]]; then
+    echo '[Error]: no positional arguments given :('
+    return 1
+  fi
+# TO-DO - CHECK IF POSITIONAL ARGUMENTS CONTAIN INVALID CHARACTERS (ONLY HEXIDECIMAL ALLOWED)
+
+# STARTING EVALUATING POTENTIAL FLCC STATES BASED ON DETECTED FLAG
+
+# START FRESH "gb200-rack-provision-v4" WORKFLOW ON NODES
+  if [[ -n "$provision_flag" ]]; then
+
+    cwctl flcc node -w gb200-rack-provision-v4 $positionalArgs
+
+  elif  [[ -n "$nodezap_flag" ]]; then
+
+    cwctl flcc node -w gb200-rack-provision-v4 -s node-zap $positionalArgs
+
+  elif  [[ -n "$dpuzap_flag" ]]; then
+
+    cwctl flcc node -w gb200-rack-provision-v4 -s dpu-zap $positionalArgs
+
+  elif  [[ -n "$l12seatrial_flag" ]]; then
+
+    cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-seatrial $positionalArgs
+
+  fi
+
+}
