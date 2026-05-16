@@ -2,6 +2,7 @@
 
 # GUARDRAILS
 #set -e
+set -u
 set -o pipefail
 
 
@@ -38,6 +39,8 @@ local flag_l11=false
 local flag_l12s=false
 local flag_l12=false
 local flag_l12p=false
+local flag_pc=false
+local flag_pd=false
 local flag_v=false
 local flag_rt=false
 local flag_dr=false
@@ -114,6 +117,12 @@ while [[ $# -gt 0 ]]; do
     -l12p|-ll2-test-loop|--l12-test-loop) 
       flag_l12p='true'; (( optionsCounter++ ))
       ;;
+    -pc|--power-cycle)
+      flag_pc='true'; (( optionsCounter++ ))
+      ;;
+    -pd|--power-drain)
+      flag_pd='true'; (( optionsCounter++ ))
+      ;;
     -rt|--retry|--send-back)
       flag_rt='true'; (( optionsCounter++ ))
       ;;
@@ -163,133 +172,151 @@ typeset -U positionalArgs
 # - CANNOT BE PURE DIGITS OR ALPHA - ENFORCE ALPHANUMERICAL
 
 #if [[ ( "$flag_b" == 'true'  && "$flag_n" == 'true' ) || "$flag_b" == 'true' ]]; then
-if [[ "$flag_b" == 'true' ]]; then
 
-  if [[ "$flag_f" == 'true' ]]; then
 
-    for i in ${positionalArgs[@]}; do
+#### PARSE FOR PROVISIONING WORKFLOW FAILURES
 
-      if [[ "$flag_nv" == 'true' ]]; then
-      
+if [[ "$flag_f" == 'true' ]]; then
+
+  for i in ${positionalArgs[@]}; do
+
+    if [[ "$flag_nv" == 'true' ]]; then
+
+      if [[ "$flag_rt" == 'true' ]]; then
+#        echo -E "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"node-vaultify\" && \$10 ==\"fail\" {print \$1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s node-vaultify"
+        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 == "node-vaultify" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s node-vaultify
+      else
 #        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"node-vaultify\" && \$10 ==\"fail\" {print \$0}'"
-        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="node-vaultify" && $10 =="fail" {print $0}'
+        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 == "node-vaultify" && $10 == "fail" {print $0}'
+      fi
 
-      elif [[ "$flag_dv" == 'true' ]]; then
-      
+    elif [[ "$flag_dv" == 'true' ]]; then
+
 #        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"dpu-vaultify\" && \$10 ==\"fail\" {print \$0}'"
-        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="dpu-vaultify" && $10 =="fail" {print $0}'
+      cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="dpu-vaultify" && $10 =="fail" {print $0}'
 
-      elif [[ "$flag_dz" == 'true' ]]; then
-      
+    elif [[ "$flag_dz" == 'true' ]]; then
+
 #        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"dpu-zap\" && \$10 ==\"fail\" {print \$0}'"
-        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="dpu-zap" && $10 =="fail" {print $0}'
+      cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="dpu-zap" && $10 =="fail" {print $0}'
 
-      elif [[ "$flag_zs" == 'true' ]]; then
-      
+    elif [[ "$flag_zs" == 'true' ]]; then
+
 #        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"zap-seatrial\" && \$10 ==\"fail\" {print \$0}'"
-        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="zap-seatrial" && $10 =="fail" {print $0}'
+      cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="zap-seatrial" && $10 =="fail" {print $0}'
 
-      elif [[ "$flag_nz" == 'true' ]]; then
-      
-        if [[ "$flag_rt" == 'true' ]]; then
+    elif [[ "$flag_nz" == 'true' ]]; then
+
+      if [[ "$flag_rt" == 'true' ]]; then
 
 #          echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"node-zap\" && \$10 ==\"fail\" {print \$1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s node-zap"
-          cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="node-zap" && $10 =="fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s node-zap
-        else
-
-#          echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"node-zap\" && \$10 ==\"fail\" {print \$0}'"
-          cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="node-zap" && $10 =="fail" {print $0}'
-
-        fi
-
-      elif [[ "$flag_fd" == 'true' ]]; then
-      
-#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"fielddiag\" && \$10 ==\"fail\" {print \$0}'"
-        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="fielddiag" && $10 =="fail" {print $0}'
-
-      elif [[ "$flag_l10" == 'true' ]]; then
-      
-#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"l10-test\" && \$10 ==\"fail\" {print \$0}'"
-        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l10-test" && $10 =="fail" {print $0}'
-
-      elif [[ "$flag_l10p" == 'true' ]]; then
-      
-#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"l10-test-loop\" && \$10 ==\"fail\" {print \$0}'"
-        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l10-test-loop" && $10 =="fail" {print $0}'
-
-      elif [[ "$flag_l11fd" == 'true' ]]; then
-      
-#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"gb200-l11-fielddiag\" && \$10 ==\"fail\" {print \$0}'"
-        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="gb200-l11-fielddiag" && $10 =="fail" {print $0}'
-
-      elif [[ "$flag_l11rb" == 'true' ]]; then
-      
-#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"node-l11-reboot\" && \$10 ==\"fail\" {print \$0}'"
-        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="node-l11-reboot" && $10 =="fail" {print $0}'
-
-      elif [[ "$flag_l11" == 'true' ]]; then
-      
-#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"l11-test\" && \$10 ==\"fail\" {print \$0}'"
-        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l11-test" && $10 =="fail" {print $0}'
-
-      elif [[ "$flag_l12s" == 'true' ]]; then
-      
-#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"l12-seatrial\" && \$10 ==\"fail\" {print \$0}'"
-        if [[ "$flag_rt" == 'true' ]]; then
-
-          cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l12-seatrial" && $10 =="fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-seatrial
-
-        else
-
-          cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l12-seatrial" && $10 =="fail" {print $0}'
-
-        fi
-
-      elif [[ "$flag_l12" == 'true' ]]; then
-
-        if [[ "$flag_rt" == 'true' ]]; then
-
-#          echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"l12-test\" && \$10 ==\"fail\" {print \$1}' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-test"
-          cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l12-test" && $10 =="fail" {print $1}' | tr '\n' ' ' |  xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-test
-
-        else
-
-#          echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"l12-test\" && \$10 ==\"fail\" {print \$0}'"
-          cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l12-test" && $10 =="fail" {print $0}'
-
-        fi
-
-      elif [[ "$flag_l12p" == 'true' ]]; then
-
-        if [[ "$flag_rt" == 'true' ]]; then
-
-#          echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"l12-test-loop\" && \$10 ==\"fail\" {print \$1}' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-test-loop"
-          cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l12-test-loop" && $10 =="fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-test-loop
-
-        else
-
-#          echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"l12-test-loop\" && \$10 ==\"fail\" {print \$0}'"
-          cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l12-test-loop" && $10 =="fail" {print $0}'
-
-        fi
-
+        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="node-zap" && $10 =="fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s node-zap
       else
 
-#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$10 == \"fail\" {print \$0}'"
-        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$10 == "fail" {print $0}'
+#          echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"node-zap\" && \$10 ==\"fail\" {print \$0}'"
+        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="node-zap" && $10 =="fail" {print $0}'
 
       fi
 
-    done
+    elif [[ "$flag_fd" == 'true' ]]; then
+
+#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"fielddiag\" && \$10 ==\"fail\" {print \$0}'"
+      cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="fielddiag" && $10 =="fail" {print $0}'
+
+    elif [[ "$flag_l10" == 'true' ]]; then
+
+#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"l10-test\" && \$10 ==\"fail\" {print \$0}'"
+      cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l10-test" && $10 =="fail" {print $0}'
+
+    elif [[ "$flag_l10p" == 'true' ]]; then
+
+#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"l10-test-loop\" && \$10 ==\"fail\" {print \$0}'"
+      cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l10-test-loop" && $10 =="fail" {print $0}'
+
+    elif [[ "$flag_l11fd" == 'true' ]]; then
+
+#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"gb200-l11-fielddiag\" && \$10 ==\"fail\" {print \$0}'"
+      cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="gb200-l11-fielddiag" && $10 =="fail" {print $0}'
+
+    elif [[ "$flag_l11rb" == 'true' ]]; then
+
+#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"node-l11-reboot\" && \$10 ==\"fail\" {print \$0}'"
+      cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="node-l11-reboot" && $10 =="fail" {print $0}'
+
+    elif [[ "$flag_l11" == 'true' ]]; then
+
+#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"l11-test\" && \$10 ==\"fail\" {print \$0}'"
+      cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l11-test" && $10 =="fail" {print $0}'
+
+    elif [[ "$flag_l12s" == 'true' ]]; then
+
+#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"l12-seatrial\" && \$10 ==\"fail\" {print \$0}'"
+      if [[ "$flag_rt" == 'true' ]]; then
+
+        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l12-seatrial" && $10 =="fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-seatrial
+
+      else
+
+        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l12-seatrial" && $10 =="fail" {print $0}'
+
+      fi
+
+    elif [[ "$flag_l12" == 'true' ]]; then
+
+      if [[ "$flag_rt" == 'true' ]]; then
+
+#          echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"l12-test\" && \$10 ==\"fail\" {print \$1}' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-test"
+        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l12-test" && $10 =="fail" {print $1}' | tr '\n' ' ' |  xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-test
+
+      else
+
+#          echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"l12-test\" && \$10 ==\"fail\" {print \$0}'"
+        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l12-test" && $10 =="fail" {print $0}'
+
+      fi
+
+    elif [[ "$flag_l12p" == 'true' ]]; then
+
+      if [[ "$flag_rt" == 'true' ]]; then
+
+#          echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"l12-test-loop\" && \$10 ==\"fail\" {print \$1}' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-test-loop"
+        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l12-test-loop" && $10 =="fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-test-loop
+
+      else
+
+#          echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"l12-test-loop\" && \$10 ==\"fail\" {print \$0}'"
+        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="l12-test-loop" && $10 =="fail" {print $0}'
+
+      fi
+
+    elif [[ "$flag_pc" == 'true' ]]; then
+
+#      echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 == \"power-cycle\" && \$10 == \"fail\" {print \$0}'"
+      cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 == "power-cycle" && $10 == "fail" {print $0}'
+
+    elif [[ "$flag_pd" == 'true' ]]; then
+
+#      echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 == \"power-drain\" && \$10 == \"fail\" {print \$0}'"
+      cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 == "power-drain" && $10 == "fail" {print $0}'
+
+    else
+
+#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$10 == \"fail\" {print \$0}'"
+      cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$10 == "fail" {print $0}'
+
+    fi
+
+  done
 
 # GUARDRAIL - PREVENT PROCESSING OF ADDITIONAL FLAGS WHEN PARSING FOR FAILURES
-    return 0
+  return 0
 
-  fi
+fi
 
 
-#####
+##### PARSE FOR RACK NODE INFO (BMN NAME, DEVICESLOT, SERIAL, IPs)
 
+if [[ "$flag_b" == 'true' ]]; then
 
 # EVALUATE OPTIONS TO PRINT BMN METADATA (NAME, DEVICESLOT, SERIAL)
   if [[ "$flag_n" == 'true' && "$flag_d" == 'true' && "$flag_s" == 'true' ]]; then
