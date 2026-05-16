@@ -23,7 +23,7 @@ local flag_cdu=false
 local flag_ps=false
 local flag_n=false
 local flag_d=false
-local flag_s=false
+local flag_sn=false
 local flag_f=false
 local flag_nv=false
 local flag_dv=false
@@ -43,6 +43,8 @@ local flag_pc=false
 local flag_pd=false
 local flag_v=false
 local flag_rt=false
+local flag_rtpc=false
+local flag_rtpd=false
 local flag_dr=false
 local positionalArgs=()
 local optionsCounter=0
@@ -70,7 +72,7 @@ while [[ $# -gt 0 ]]; do
       flag_d='true'; (( optionsCounter++ ))
       ;;
     -s|--serial)
-      flag_s='true'; (( optionsCounter++ ))
+      flag_sn='true'; (( optionsCounter++ ))
       ;;
     -f|--failed)
       flag_f='true'; (( optionsCounter++ ))
@@ -125,6 +127,12 @@ while [[ $# -gt 0 ]]; do
       ;;
     -rt|--retry|--send-back)
       flag_rt='true'; (( optionsCounter++ ))
+      ;;
+    -rtpc|--retry-by-powercycle)
+      flag_rtpc='true'; (( optionsCounter++ ))
+      ;;
+    -rtpd|--retry-by-powerdrain)
+      flag_rtpd='true'; (( optionsCounter++ ))
       ;;
     -dr|--dryrun)
       flag_dr='true'; (( optionsCounter++ ))
@@ -208,14 +216,17 @@ if [[ "$flag_f" == 'true' ]]; then
     elif [[ "$flag_nz" == 'true' ]]; then
 
       if [[ "$flag_rt" == 'true' ]]; then
-
-#          echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"node-zap\" && \$10 ==\"fail\" {print \$1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s node-zap"
+#          echo -E "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"node-zap\" && \$10 ==\"fail\" {print \$1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s node-zap"
         cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="node-zap" && $10 =="fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s node-zap
+      elif [[ "$flag_rtpc" == 'true' ]]; then
+#        echo -E "cwctl describe rack \$i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 =="node-zap" && \$10 =="fail" {print \$1}' | tr '\n' ' ' | xargs cwctl flcc node --one-off -w instant-power-cycle"
+        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 == "node-zap" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node --one-off -w instant-power-cycle
+      elif [[ "$flag_rtpd" == 'true' ]]; then
+#        echo -E "cwctl describe rack \$i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 =="node-zap" && $\10 =="fail" {print \$1}' | tr '\n' ' ' | xargs cwctl flcc node --one-off -w instant-power-drain"
+        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 == "node-zap" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node --one-off -w instant-power-drain
       else
-
-#          echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"node-zap\" && \$10 ==\"fail\" {print \$0}'"
+#          echo -E "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"node-zap\" && \$10 ==\"fail\" {print \$0}'"
         cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="node-zap" && $10 =="fail" {print $0}'
-
       fi
 
     elif [[ "$flag_fd" == 'true' ]]; then
@@ -319,7 +330,7 @@ fi
 if [[ "$flag_b" == 'true' ]]; then
 
 # EVALUATE OPTIONS TO PRINT BMN METADATA (NAME, DEVICESLOT, SERIAL)
-  if [[ "$flag_n" == 'true' && "$flag_d" == 'true' && "$flag_s" == 'true' ]]; then
+  if [[ "$flag_n" == 'true' && "$flag_d" == 'true' && "$flag_sn" == 'true' ]]; then
 
       echo '[TODO] - OUTPUT BMN NAME, DEVICESLOT, & SERIAL'
 
@@ -330,14 +341,14 @@ if [[ "$flag_b" == 'true' ]]; then
 #      echo "kubectl get bmn -l \"ds.coreweave.com/physical-topology.rack-name=$i\" --sort-by=\".metadata.labels['flcc\.coreweave\.com/deviceslot']\" -o custom-columns=\"BMN:.metadata.name,DEVICESLOT:.metadata.labels['flcc\.coreweave\.com/deviceslot']\" --no-headers"
     done
 
-  elif [[ "$flag_n" == 'true' && "$flag_s" == 'true' ]]; then
+  elif [[ "$flag_n" == 'true' && "$flag_sn" == 'true' ]]; then
 
     for i in ${positionalArgs[@]}; do
 #      echo "kubectl get bmn -l \"ds.coreweave.com/physical-topology.rack-name=$i\" --sort-by=\".metadata.labels['flcc\.coreweave\.com/deviceslot']\" -o custom-columns=\"BMN:.metadata.name\" --no-headers | tr '\n' ' ' | xargs cvrt b2s | tr ' ' '\n'"
       kubectl get bmn -l "ds.coreweave.com/physical-topology.rack-name=$i" --sort-by=".metadata.labels['flcc\.coreweave\.com/deviceslot']" -o custom-columns="BMN:.metadata.name" --no-headers | tr '\n' ' ' | xargs cvrt b2s | tr ' ' '\n'
     done
 
-  elif [[ "$flag_d" == 'true' && "$flag_s" == 'true' ]]; then
+  elif [[ "$flag_d" == 'true' && "$flag_sn" == 'true' ]]; then
 
       echo '[TODO] - OUTPUT ONLY NODE DEVICESLOT & SERIAL'
 
@@ -348,7 +359,7 @@ if [[ "$flag_b" == 'true' ]]; then
       kubectl get bmn -l "ds.coreweave.com/physical-topology.rack-name=$i" --sort-by=".metadata.labels['flcc\.coreweave\.com/deviceslot']" -o custom-columns="DEVICESLOT:.metadata.labels['flcc\.coreweave\.com/deviceslot']" --no-headers 
     done
 
-  elif [[ "$flag_s" == 'true' ]]; then
+  elif [[ "$flag_sn" == 'true' ]]; then
 
     for i in ${positionalArgs[@]}; do
 #      echo "kubectl get bmn -l \"ds.coreweave.com/physical-topology.rack-name=$i\" --sort-by=\".metadata.labels['flcc\.coreweave\.com/deviceslot']\" -o custom-columns=\"BMN:.metadata.name\" --no-headers | tr '\n' ' ' | xargs cvrt b2s | tr ' ' '\n'"
