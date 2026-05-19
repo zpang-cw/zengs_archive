@@ -1,12 +1,13 @@
 #!/bin/zsh
 
-# GUARDRAILS
+#### GUARDRAILS
 #set -e
 set -u
 set -o pipefail
 
 
-# USAGE
+#### USAGE GUIDE
+# TO-DO - CONVERT USAGE OUTPUT INTO A FUNCTION
 if [ $# -lt 1 ]; then
 
   echo '[Usage]: rackinfo <-b|-nv|-cdu|-ps> <-n|-d|-v|-s> <rack0...rackN>'
@@ -17,6 +18,42 @@ if [ $# -lt 1 ]; then
 
 fi
 
+#### FUNC DEFINITIONS
+
+# CMDS USED TO GATHER STATUS OF RACK NODES
+bmn_query () {
+
+  if [ $# -lt 1 ]; then return 1; fi
+
+  for i in $@; do
+    cwctl describe rack --sections=bmns $i | sed -e '1,/----/ d'
+  done
+
+}
+
+# CMDS USED TO GATHER STATUS OF RACK DEVICES
+#dvc_query () {
+#
+#}
+
+# CMDS USED FOR ONE-OFF NODE POWER-CYCLES
+bmn_pc () {
+
+  if [ $# -lt 1 ]; then return 1; fi
+  cwctl flcc node --one-off -w instant-power-cycle "$@"
+
+}
+
+# CMDS USED FOR ONE-OFF NODE POWER-DRAINS
+bmn_pd () {
+
+  if [ $# -lt 1 ]; then return 1; fi
+  cwctl flcc node --one-off -w instant-power-drain "$@"
+
+}
+
+
+# VAR DECLARATIONS
 local flag_b=false
 local flag_nv=false
 local flag_cdu=false
@@ -231,8 +268,20 @@ if [[ "$flag_f" == 'true' ]]; then
 
     elif [[ "$flag_fd" == 'true' ]]; then
 
+      if [[ "$flag_rt" == 'true' ]]; then
+        bmn_query $i | awk '$9 =="fielddiag" && $10 =="fail" {print $1}'
+
+      elif [[ "$flag_rtpc" == 'true' ]]; then
+        bmn_query $i | awk '$9 =="fielddiag" && $10 =="fail" {print $1}' | while read -r line; do bmn_pc $line; done
+
+      elif [[ "$flag_rtpd" == 'true' ]]; then
+        bmn_query $i | awk '$9 =="fielddiag" && $10 =="fail" {print $1}' | while read -r line; do bmn_pd $line; done
+
+      else
 #        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"fielddiag\" && \$10 ==\"fail\" {print \$0}'"
-      cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="fielddiag" && $10 =="fail" {print $0}'
+        bmn_query $i | awk '$9 == "fielddiag" && $10 =="fail" {print $0}'
+
+      fi
 
     elif [[ "$flag_l10" == 'true' ]]; then
 
