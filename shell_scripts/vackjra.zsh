@@ -10,7 +10,7 @@ set -o pipefail
 # TO-DO - CONVERT USAGE OUTPUT INTO A FUNCTION
 if [ $# -lt 1 ]; then
 
-  echo '[Usage]: rackinfo <-b|-nv|-cdu|-ps> <-n|-d|-v|-s> <rack0...rackN>'
+  echo '[Usage]: vackjra <-b|-nv|-cdu|-ps> <-n|-d|-v|-s> <rack0...rackN>'
 
   echo "[Flags]:\n-b --> compute bmns/compute trays/nodes\n-nv --> nvlink switches\n-cdu --> cooling distribution units\n-ps --> power shelves\n-n --> ssname\n-s --> serial\n-d --> deviceslot\n-v --> verbose (name,deviceslot,serial)"
 
@@ -240,10 +240,22 @@ if [[ "$flag_f" == 'true' ]]; then
 #        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"dpu-vaultify\" && \$10 ==\"fail\" {print \$0}'"
       cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="dpu-vaultify" && $10 =="fail" {print $0}'
 
+
     elif [[ "$flag_dz" == 'true' ]]; then
 
-#        echo "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"dpu-zap\" && \$10 ==\"fail\" {print \$0}'"
-      cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="dpu-zap" && $10 =="fail" {print $0}'
+      if [[ "$flag_rt" == 'true' ]]; then
+        bmn_query $i | awk '$9 =="dpu-zap" && $10 =="fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s dpu-zap
+
+      elif [[ "$flag_rtpc" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "dpu-zap" && $10 == "fail" {print $1}' | while read -r line; do bmn_pc $line; done
+
+      elif [[ "$flag_rtpd" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "dpu-zap" && $10 == "fail" {print $1}' | while read -r line; do bmn_pd $line; done
+
+      else
+        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="dpu-zap" && $10 =="fail" {print $0}'
+      fi
+
 
     elif [[ "$flag_zs" == 'true' ]]; then
 
@@ -253,18 +265,18 @@ if [[ "$flag_f" == 'true' ]]; then
     elif [[ "$flag_nz" == 'true' ]]; then
 
       if [[ "$flag_rt" == 'true' ]]; then
-#          echo -E "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"node-zap\" && \$10 ==\"fail\" {print \$1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s node-zap"
-        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="node-zap" && $10 =="fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s node-zap
+        bmn_query $i | awk '$9 =="node-zap" && $10 =="fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s node-zap
+
       elif [[ "$flag_rtpc" == 'true' ]]; then
-#        echo -E "cwctl describe rack \$i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 =="node-zap" && \$10 =="fail" {print \$1}' | tr '\n' ' ' | xargs cwctl flcc node --one-off -w instant-power-cycle"
-        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 == "node-zap" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node --one-off -w instant-power-cycle
+        bmn_query $i | awk '$9 == "node-zap" && $10 == "fail" {print $1}' | while read -r line; do bmn_pc $line; done
+
       elif [[ "$flag_rtpd" == 'true' ]]; then
-#        echo -E "cwctl describe rack \$i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 =="node-zap" && $\10 =="fail" {print \$1}' | tr '\n' ' ' | xargs cwctl flcc node --one-off -w instant-power-drain"
-        cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 == "node-zap" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node --one-off -w instant-power-drain
+        bmn_query $i | awk '$9 == "node-zap" && $10 == "fail" {print $1}' | while read -r line; do bmn_pd $line; done
+
       else
-#          echo -E "cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '\$9 ==\"node-zap\" && \$10 ==\"fail\" {print \$0}'"
         cwctl describe rack $i --sections=bmns | sed -e '1,/----/ d' | awk '$9 =="node-zap" && $10 =="fail" {print $0}'
       fi
+
 
     elif [[ "$flag_fd" == 'true' ]]; then
 
