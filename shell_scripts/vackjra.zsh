@@ -237,16 +237,16 @@ if [[ "$flag_f" == 'true' ]]; then
     elif [[ "$flag_dv" == 'true' ]]; then
 
       if [[ "$flag_rt" == 'true' ]]; then
-        bmn_query $i | awk '$9 =="dpu-vaultify" && $10 =="fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s dpu-vaultify
+        bmn_query $i | awk '$9 == "dpu-vaultify" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s dpu-vaultify
       else
-        bmn_query $i | awk '$9 =="dpu-vaultify" && $10 =="fail" {print $0}'
+        bmn_query $i | awk '$9 == "dpu-vaultify" && $10 == "fail" {print $0}'
       fi
 
 
     elif [[ "$flag_dz" == 'true' ]]; then
 
       if [[ "$flag_rt" == 'true' ]]; then
-        bmn_query $i | awk '$9 =="dpu-zap" && $10 =="fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s dpu-zap
+        bmn_query $i | awk '$9 == "dpu-zap" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s dpu-zap
 
       elif [[ "$flag_rtpc" == 'true' ]]; then
         bmn_query $i | awk '$9 == "dpu-zap" && $10 == "fail" {print $1}' | while read -r line; do bmn_pc $line; done
@@ -255,18 +255,23 @@ if [[ "$flag_f" == 'true' ]]; then
         bmn_query $i | awk '$9 == "dpu-zap" && $10 == "fail" {print $1}' | while read -r line; do bmn_pd $line; done
 
       else
-        bmn_query $i | awk '$9 =="dpu-zap" && $10 =="fail" {print $0}'
+        bmn_query $i | awk '$9 == "dpu-zap" && $10 == "fail" {print $0}'
       fi
 
 
     elif [[ "$flag_zs" == 'true' ]]; then
 
-      bmn_query $i | awk '$9 =="zap-seatrial" && $10 =="fail" {print $0}'
+      if [[ "$flag_rt" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "zap-seatrial" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s zap-seatrial
+      else
+        bmn_query $i | awk '$9 == "zap-seatrial" && $10 == "fail" {print $0}'
+      fi
+
 
     elif [[ "$flag_nz" == 'true' ]]; then
 
       if [[ "$flag_rt" == 'true' ]]; then
-        bmn_query $i | awk '$9 =="node-zap" && $10 =="fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s node-zap
+        bmn_query $i | awk '$9 == "node-zap" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s node-zap
 
       elif [[ "$flag_rtpc" == 'true' ]]; then
         bmn_query $i | awk '$9 == "node-zap" && $10 == "fail" {print $1}' | while read -r line; do bmn_pc $line; done
@@ -275,89 +280,134 @@ if [[ "$flag_f" == 'true' ]]; then
         bmn_query $i | awk '$9 == "node-zap" && $10 == "fail" {print $1}' | while read -r line; do bmn_pd $line; done
 
       else
-        bmn_query $i | awk '$9 =="node-zap" && $10 =="fail" {print $0}'
+        bmn_query $i | awk '$9 == "node-zap" && $10 == "fail" {print $0}'
       fi
 
 
     elif [[ "$flag_fd" == 'true' ]]; then
 
       if [[ "$flag_rt" == 'true' ]]; then
-        bmn_query $i | awk '$9 =="fielddiag" && $10 =="fail" {print $1}'
+        bmn_query $i | awk '$9 == "fielddiag" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s fielddiag
 
       elif [[ "$flag_rtpc" == 'true' ]]; then
-        bmn_query $i | awk '$9 =="fielddiag" && $10 =="fail" {print $1}' | while read -r line; do bmn_pc $line; done
+        bmn_query $i | awk '$9 == "fielddiag" && $10 == "fail" {print $1}' | while read -r line; do bmn_pc $line; done
 
       elif [[ "$flag_rtpd" == 'true' ]]; then
-        bmn_query $i | awk '$9 =="fielddiag" && $10 =="fail" {print $1}' | while read -r line; do bmn_pd $line; done
+        bmn_query $i | awk '$9 == "fielddiag" && $10 == "fail" {print $1}' | while read -r line; do bmn_pd $line; done
 
       else
-        bmn_query $i | awk '$9 == "fielddiag" && $10 =="fail" {print $0}'
-
+        bmn_query $i | awk '$9 == "fielddiag" && $10 == "fail" {print $0}'
       fi
+
 
     elif [[ "$flag_l10" == 'true' ]]; then
 
-      bmn_query $i | awk '$9 =="l10-test" && $10 =="fail" {print $0}'
+      if [[ "$flag_rt" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "l10-test" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s l10-test
+
+      elif [[ "$flag_rtpc" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "l10-test" && $10 == "fail" {print $1}' | while read -r line; do bmn_pc $line; done
+
+      elif [[ "$flag_rtpd" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "l10-test" && $10 == "fail" {print $1}' | while read -r line; do bmn_pd $line; done
+
+      else
+        bmn_query $i | awk '$9 == "l10-test" && $10 == "fail" {print $0}'
+      fi
+
 
     elif [[ "$flag_l10p" == 'true' ]]; then
 
-      bmn_query $i | awk '$9 =="l10-test-loop" && $10 =="fail" {print $0}'
+      if [[ "$flag_rt" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "l10-test-loop" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s l10-test-loop
 
+      elif [[ "$flag_rtpc" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "l10-test-loop" && $10 == "fail" {print $1}' | while read -r line; do bmn_pc $line; done
+
+      elif [[ "$flag_rtpd" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "l10-test-loop" && $10 == "fail" {print $1}' | while read -r line; do bmn_pd $line; done
+
+      else
+        bmn_query $i | awk '$9 == "l10-test-loop" && $10 == "fail" {print $0}'
+      fi
+
+# TO-DO - UNIQUE WORKFLOW FOR RE-RETRYING L11FD
     elif [[ "$flag_l11fd" == 'true' ]]; then
 
-      bmn_query $i | awk '$9 =="gb200-l11-fielddiag" && $10 =="fail" {print $0}'
+      bmn_query $i | awk '$9 == "gb200-l11-fielddiag" && $10 == "fail" {print $0}'
+
 
     elif [[ "$flag_l11rb" == 'true' ]]; then
 
-      bmn_query $i | awk '$9 =="node-l11-reboot" && $10 =="fail" {print $0}'
+      if [[ "$flag_rt" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "node-l11-reboot" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s node-l11-reboot
+
+      else
+        bmn_query $i | awk '$9 == "node-l11-reboot" && $10 == "fail" {print $0}'
+      fi
+
 
     elif [[ "$flag_l11" == 'true' ]]; then
 
-      bmn_query $i | awk '$9 =="l11-test" && $10 =="fail" {print $0}'
+      if [[ "$flag_rt" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "l11-test" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l11-test
+
+      else
+        bmn_query $i | awk '$9 == "l11-test" && $10 == "fail" {print $0}'
+      fi
+
 
     elif [[ "$flag_l12s" == 'true' ]]; then
 
       if [[ "$flag_rt" == 'true' ]]; then
-
-        bmn_query $i | awk '$9 =="l12-seatrial" && $10 =="fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-seatrial
+        bmn_query $i | awk '$9 == "l12-seatrial" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-seatrial
 
       else
-
-        bmn_query $i | awk '$9 =="l12-seatrial" && $10 =="fail" {print $0}'
-
+        bmn_query $i | awk '$9 == "l12-seatrial" && $10 == "fail" {print $0}'
       fi
+
 
     elif [[ "$flag_l12" == 'true' ]]; then
 
       if [[ "$flag_rt" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "l12-test" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-test
 
-        bmn_query $i | awk '$9 =="l12-test" && $10 =="fail" {print $1}' | tr '\n' ' ' |  xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-test
+      elif [[ "$flag_rtpc" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "l12-test" && $10 == "fail" {print $1}' | while read -r line; do bmn_pc $line; done
+
+      elif [[ "$flag_rtpd" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "l12-test" && $10 == "fail" {print $1}' | while read -r line; do bmn_pd $line; done
 
       else
-
-        bmn_query $i | awk '$9 =="l12-test" && $10 =="fail" {print $0}'
-
+        bmn_query $i | awk '$9 == "l12-test" && $10 == "fail" {print $0}'
       fi
+
 
     elif [[ "$flag_l12p" == 'true' ]]; then
 
       if [[ "$flag_rt" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "l12-test-loop" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-test-loop
 
-        bmn_query $i | awk '$9 =="l12-test-loop" && $10 =="fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-test-loop
+      elif [[ "$flag_rtpc" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "l12-test-loop" && $10 == "fail" {print $1}' | while read -r line; do bmn_pc $line; done
+
+      elif [[ "$flag_rtpd" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "l12-test-loop" && $10 == "fail" {print $1}' | while read -r line; do bmn_pd $line; done
 
       else
-
-        bmn_query $i | awk '$9 =="l12-test-loop" && $10 =="fail" {print $0}'
-
+        bmn_query $i | awk '$9 == "l12-test-loop" && $10 == "fail" {print $0}'
       fi
+
 
     elif [[ "$flag_pc" == 'true' ]]; then
 
       bmn_query $i | awk '$9 == "power-cycle" && $10 == "fail" {print $0}'
 
+
     elif [[ "$flag_pd" == 'true' ]]; then
 
       bmn_query $i | awk '$9 == "power-drain" && $10 == "fail" {print $0}'
+
 
     else
 
