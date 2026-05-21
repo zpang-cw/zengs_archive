@@ -31,6 +31,7 @@ bmn_query () {
 
 }
 
+# TO-DO
 # CMDS USED TO GATHER STATUS OF RACK DEVICES
 #dvc_query () {
 #
@@ -49,6 +50,16 @@ bmn_pd () {
 
   if [ $# -lt 1 ]; then return 1; fi
   cwctl flcc node --one-off -w instant-power-drain "$@"
+
+}
+
+# FUNCTION FOR USER CONFIRMATION
+confirm() {
+
+  local prompt="${1:-Proceed?}"
+  local reply
+  read "?$prompt (Y/n): " reply < /dev/tty
+  [[ "$reply:l" == y || "$reply:l" == yes ]]
 
 }
 
@@ -238,6 +249,10 @@ if [[ "$flag_f" == 'true' ]]; then
 
       if [[ "$flag_rt" == 'true' ]]; then
         bmn_query $i | awk '$9 == "dpu-vaultify" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-provision-v4 -s dpu-vaultify
+      elif [[ "$flag_rtpc" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "dpu-vaultify" && $10 == "fail" {print $1}' | while read -r line; do bmn_pc $line; done
+      elif [[ "$flag_rtpd" == 'true' ]]; then
+        bmn_query $i | awk '$9 == "dpu-vaultify" && $10 == "fail" {print $1}' | while read -r line; do bmn_pd $line; done
       else
         bmn_query $i | awk '$9 == "dpu-vaultify" && $10 == "fail" {print $0}'
       fi
@@ -331,7 +346,7 @@ if [[ "$flag_f" == 'true' ]]; then
         bmn_query $i | awk '$9 == "l10-test-loop" && $10 == "fail" {print $0}'
       fi
 
-# TO-DO - UNIQUE WORKFLOW FOR RE-RETRYING L11FD
+# TO-DO - UNIQUE RETRY CMDS FOR RE-RETRYING L11FD
     elif [[ "$flag_l11fd" == 'true' ]]; then
 
       bmn_query $i | awk '$9 == "gb200-l11-fielddiag" && $10 == "fail" {print $0}'
@@ -411,7 +426,43 @@ if [[ "$flag_f" == 'true' ]]; then
 
     else
 
-      bmn_query $i | awk '$10 == "fail" {print $0}'
+# LIST ALL FAILED WORKFLOW STEPS IN A RACK -- OPTION TO POWER-CYCLE OR POWER-DRAIN ALL FAILS -- ASKS USER FOR CONFIRMATION
+      if [[ "$flag_rtpc" == 'true' ]]; then
+
+        bmn_query $i | awk '$10 == "fail" {print $1}' | while read -r line; do
+
+          echo "[$line]"
+          kubectl get bmn $line
+
+          echo '[CHECK-POINT]'
+          if confirm "Run 'cwctl flcc node --one-off -w instant-power-cycle $line'"; then
+            bmn_pc $line
+          else
+            echo "[$line] one-off power-cycle CANCELLED"
+          fi
+
+        done
+
+      elif [[ "$flag_rtpd" == 'true' ]]; then
+
+        bmn_query $i | awk '$10 == "fail" {print $1}' | while read -r line; do
+
+          echo "[$line]"
+          kubectl get bmn $line
+
+          echo '[CHECK-POINT]'
+          if confirm "Run 'cwctl flcc node --one-off -w instant-power-drain $line'"; then
+            bmn_pd $line
+          else
+            echo "[$line] one-off power-drain CANCELLED"
+          fi
+
+        done
+
+      else
+        bmn_query $i | awk '$10 == "fail" {print $0}'
+      fi
+
 
     fi
 
