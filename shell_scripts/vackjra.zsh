@@ -1,24 +1,71 @@
 #!/bin/zsh
 
-#### GUARDRAILS
-#set -e
+set -e
 set -u
 set -o pipefail
 
 
-#### USAGE GUIDE
-# TO-DO - CONVERT USAGE OUTPUT INTO A FUNCTION
-if [ $# -lt 1 ]; then
-
-  echo '[Usage]: vackjra <-b|-nv|-cdu|-ps> <-n|-d|-v|-s> <rack0...rackN>'
-
-  echo "[Flags]:\n-b --> compute bmns/compute trays/nodes\n-nv --> nvlink switches\n-cdu --> cooling distribution units\n-ps --> power shelves\n-n --> ssname\n-s --> serial\n-d --> deviceslot\n-v --> verbose (name,deviceslot,serial)"
-
-  return 1
-
-fi
-
 #### FUNC DEFINITIONS
+
+# USAGE GUIDE
+
+show_manual() {
+
+cat << EOF
+
+vackjra - a CLI tool purposed for showing/re-sending bmn fails in GBX racks with ease
+
+[USAGE]
+
+vackjra [-h|--help] [-f|--failed] [failed-steps] [-rt|--retry|-rtpc|--retry-by-powercycle|-rtpd|--retry-by-powerdrain] <rack0 .. rackN>
+
+
+[FAILED-STEPS]
+
+-nv | --node-vaultify
+-nz | --node-zap
+-dv | --dpu-vaultify
+-dz | --dpu-zap
+-zs | --zap-seatrial
+-nz | --node-zap
+-fd | --fielddiag
+-l10 | --l10-test
+-l10p | --l10-test-loop
+-l11fd | --gb200-l11-fielddiag
+-l11rb | --node-l11-reboot
+-l11 | --l11-test
+-l12s | --l12-seatrial
+-l12 | --l12-test
+-l12p | --l12-test-loop
+-pc | --power-cycle
+-pd | --power-drain
+
+
+[EXAMPLES]
+
+# SHOW ALL FAILED BMNS IN A RACK
+vackjra -f <rack>
+
+# SHOW ALL NODE-ZAP FAILS
+vackjra -f -nz <rack>
+
+# SEND BACK ALL NODE-ZAPS
+vackjra -f -nz -rt <rack>
+
+# SEND BACK ALL NODE-ZAPS VIA POWER-CYCLE
+vackjra -f -nz -rtpc <rack>
+
+# SEND BACK ALL NODE-ZAPS VIA POWER-DRAIN
+vackjra -f -nz -rtpd <rack>
+
+# SEND BACK ALL FAILS VIA POWER-CYCLE (NOTE - THIS CURRENTLY REQUIRES MANUAL CONFIRMATION FOR EVERY ACTION!)
+vackjra -f -rtpc <rack>
+
+# SEND BACK ALL FAILS VIA POWER-DRAIN (NOTE - THIS CURRENTLY REQUIRES MANUAL CONFIRMATION FOR EVERY ACTION!)
+vackjra -f -rtpd <rack>
+
+EOF
+}
 
 # CMDS USED TO GATHER STATUS OF RACK NODES
 bmn_query () {
@@ -94,99 +141,114 @@ local flag_rt=false
 local flag_rtpc=false
 local flag_rtpd=false
 local flag_dr=false
+local flag_h=false
 local positionalArgs=()
 local optionsCounter=0
 
+
+# IF NO ARGUMENTS GIVEN - SHOW USAGE GUIDE
+if [ $# -lt 1 ]; then
+
+    show_manual
+    return 1
+
+fi
+
+
+# START PARSING OPTION FLAGS
 while [[ $# -gt 0 ]]; do
 
   case $1 in
 
     -b|--bmn|--bmns)
-      flag_b='true'; (( optionsCounter++ ))
+      flag_b='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -nv|--nvlink|--nvlinks)
-      flag_nv='true'; (( optionsCounter++ ))
+      flag_nv='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -c|--cdu|--cdus)
-      flag_cdu='true'; (( optionsCounter++ ))
+      flag_cdu='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -p|--ps|--powershelves)
-      flag_ps='true'; (( optionsCounter++ ))
+      flag_ps='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -n|--name)
-      flag_n='true'; (( optionsCounter++ ))
+      flag_n='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -d|--deviceslot)
-      flag_d='true'; (( optionsCounter++ ))
+      flag_d='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -s|--serial)
-      flag_sn='true'; (( optionsCounter++ ))
+      flag_sn='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -f|--failed)
-      flag_f='true'; (( optionsCounter++ ))
+      flag_f='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -nv|--node-vaultify) 
-      flag_nv='true'; (( optionsCounter++ ))
+      flag_nv='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -dv|--dpu-vaultify) 
-      flag_dv='true'; (( optionsCounter++ ))
+      flag_dv='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -dz|--dpu-zap) 
-      flag_dz='true'; (( optionsCounter++ ))
+      flag_dz='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -zs|--zap-seatrial) 
-      flag_zs='true'; (( optionsCounter++ ))
+      flag_zs='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -nz|--node-zap) 
-      flag_nz='true'; (( optionsCounter++ ))
+      flag_nz='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -fd|--fielddiag) 
-      flag_fd='true'; (( optionsCounter++ ))
+      flag_fd='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -l10|-l10-test|--l10-test) 
-      flag_l10='true'; (( optionsCounter++ ))
+      flag_l10='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -l10p|-l10-test-loop|--l10-test-loop) 
-      flag_l10p='true'; (( optionsCounter++ ))
+      flag_l10p='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -l11fd|-l11-fielddiag|--l11-fielddiag|--gb200-l11-fielddiag) 
-      flag_l11fd='true'; (( optionsCounter++ ))
+      flag_l11fd='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -l11rb|-node-l11-reboot|--node-l11-reboot) 
-      flag_l11rb='true'; (( optionsCounter++ ))
+      flag_l11rb='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -l11|-l11-test|--l11-test) 
-      flag_l11='true'; (( optionsCounter++ ))
+      flag_l11='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -l12s|-l12-seatrial|--l12-seatrial) 
-      flag_l12s='true'; (( optionsCounter++ ))
+      flag_l12s='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -l12|-l12-test|--l12-test) 
-      flag_l12='true'; (( optionsCounter++ ))
+      flag_l12='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -l12p|-ll2-test-loop|--l12-test-loop) 
-      flag_l12p='true'; (( optionsCounter++ ))
+      flag_l12p='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -pc|--power-cycle)
-      flag_pc='true'; (( optionsCounter++ ))
+      flag_pc='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -pd|--power-drain)
-      flag_pd='true'; (( optionsCounter++ ))
+      flag_pd='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -rt|--retry|--send-back)
-      flag_rt='true'; (( optionsCounter++ ))
+      flag_rt='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -rtpc|--retry-by-powercycle)
-      flag_rtpc='true'; (( optionsCounter++ ))
+      flag_rtpc='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -rtpd|--retry-by-powerdrain)
-      flag_rtpd='true'; (( optionsCounter++ ))
+      flag_rtpd='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -dr|--dryrun)
-      flag_dr='true'; (( optionsCounter++ ))
+      flag_dr='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -v|--verbose)
-      flag_v='true'; (( optionsCounter++ ))
+      flag_v='true'; optionsCounter=$(( optionsCounter + 1 ))
+      ;;
+    -h|--help)
+      flag_h='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     --)
       shift
@@ -212,6 +274,15 @@ then
 fi
 
 
+# OUTPUT USAGE MANUAL IF `-h/--help` OPTIONS WERE PASSED
+if [[ "$flag_h" == 'true' ]]; then
+
+    show_manual
+    return 0
+
+fi
+
+
 # THROW ERROR IF NO POSITIONAL ARGS GIVEN
 if [[ -z $positionalArgs ]]
 then
@@ -219,18 +290,23 @@ then
 	return 1
 fi
 
-# REMOVE DUPLICATES
+
+# REMOVE DUPLICATES IN POSITIONAL ARGS
 typeset -U positionalArgs
 
-# TO-DO: SANITY CHECKS OF POSITIONAL ARGS
+
+# TO-DO: ADDITIONAL SANITY CHECKS OF PASSED POSITIONAL ARGS
 # - CATCH SPECIAL CHARACTERS
 # - MIN & MAX LENGTH
 # - CANNOT BE PURE DIGITS OR ALPHA - ENFORCE ALPHANUMERICAL
 
-#if [[ ( "$flag_b" == 'true'  && "$flag_n" == 'true' ) || "$flag_b" == 'true' ]]; then
 
 
 #### PARSE FOR PROVISIONING WORKFLOW FAILURES
+
+# TO-DO - OPTION TO ACTION ON MULTIPLE SPECIFIED FAILURES
+# REFERENCE SYNTAX - if  [[ ( "$flag_b" == 'true'  && "$flag_n" == 'true' ) || "$flag_b" == 'true' ]]; then
+
 
 if [[ "$flag_f" == 'true' ]]; then
 
