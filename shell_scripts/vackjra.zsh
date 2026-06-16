@@ -13,14 +13,14 @@ show_manual() {
 
 cat << EOF
 
-vackjra - a CLI tool purposed for showing/re-sending bmn fails in GBX racks with ease
+vackjra - a CLI tool purposed for sending/retrying bmn provisioning states across various FLCC workflows (compatible with GBX nodes currently)
 
 [USAGE]
 
-vackjra [-h|--help] [-f|--failed] [failed-steps] [-rt|--retry|-rtpc|--retry-by-powercycle|-rtpd|--retry-by-powerdrain] <rack0 .. rackN>
+vackjra [-h|--help] [-s|--send] <workflow_steps> [-f|--failed] <failed_steps> [-rt|--retry|-rtpc|--retry-by-powercycle|-rtpd|--retry-by-powerdrain] <rack0 .. rackN>
 
 
-[FAILED-STEPS]
+[WORKFLOW STATES]
 
 -nv | --node-vaultify
 -nz | --node-zap
@@ -39,9 +39,13 @@ vackjra [-h|--help] [-f|--failed] [failed-steps] [-rt|--retry|-rtpc|--retry-by-p
 -l12p | --l12-test-loop
 -pc | --power-cycle
 -pd | --power-drain
+-pv | --provision
 
 
 [EXAMPLES]
+
+# SEND A BMN TO A WORKFLOW STATE (START PROVISIONING WORKFLOW)
+vackjra -s -pv <bmn>
 
 # SHOW ALL FAILED BMNS IN A RACK
 vackjra -f <rack>
@@ -110,6 +114,12 @@ confirm() {
 
 }
 
+# FUNCTION AS SHORT-HAND GBX FLCC PROVISION WORKFLOW
+gbx_provision() {
+
+  cwctl flcc node -w gb200-rack-provision-v4 "$@"
+
+}
 
 # VAR DECLARATIONS
 local flag_b=false
@@ -136,12 +146,14 @@ local flag_l12=false
 local flag_l12p=false
 local flag_pc=false
 local flag_pd=false
+local flag_pv=false
 local flag_v=false
 local flag_rt=false
 local flag_rtpc=false
 local flag_rtpd=false
 local flag_dr=false
 local flag_h=false
+local flag_s=false
 local positionalArgs=()
 local optionsCounter=0
 
@@ -178,11 +190,17 @@ while [[ $# -gt 0 ]]; do
     -d|--deviceslot)
       flag_d='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
-    -s|--serial)
-      flag_sn='true'; optionsCounter=$(( optionsCounter + 1 ))
+    -sn|--serial)
+      flag_s='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -f|--failed)
       flag_f='true'; optionsCounter=$(( optionsCounter + 1 ))
+      ;;
+    -s|--send)
+      flag_s='true'; optionsCounter=$(( optionsCounter + 1 ))
+      ;;
+    -pv|--provision)
+      flag_pv='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -nv|--node-vaultify) 
       flag_nv='true'; optionsCounter=$(( optionsCounter + 1 ))
@@ -300,6 +318,23 @@ typeset -U positionalArgs
 # - MIN & MAX LENGTH
 # - CANNOT BE PURE DIGITS OR ALPHA - ENFORCE ALPHANUMERICAL
 
+
+#### PARSE FOR WORKFLOW STATES TO SEND BMNS TO
+
+if [[ "$flag_s" == 'true' ]]; then
+
+  for i in ${positionalArgs[@]}; do
+
+    if [[ "$flag_pv" == 'true' ]]; then
+
+      gbx_provision $i
+
+    fi
+    return 0
+
+  done
+
+fi
 
 
 #### PARSE FOR PROVISIONING WORKFLOW FAILURES
