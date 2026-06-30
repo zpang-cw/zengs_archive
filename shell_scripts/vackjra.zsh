@@ -38,7 +38,8 @@ vackjra [-h|--help] [-s|--send] <workflow_steps> [-f|--failed] <failed_steps> [-
 -l12 | --l12-test
 -l12p | --l12-test-loop
 -pc | --power-cycle
--pd | --power-drain
+-pr | --power-reset
+-pd | -vac | --power-drain
 -pv | --provision
 
 
@@ -121,6 +122,20 @@ gbx_provision() {
 
 }
 
+# FUNCTION AS SHORT-HAND GBX FLCC HPC VERF WORKFLOW
+gbx_hpcverf() {
+
+  cwctl flcc node -w gb200-rack-hpc-verification-v4 "$@"
+
+}
+
+# FUNCTION AS SHORT-HAND FOR FLCC ONE-OFF WORKFLOWS
+node_oneoff() {
+
+  cwctl flcc node --one-off "$@"
+
+}
+
 # VAR DECLARATIONS
 local flag_b=false
 local flag_nv=false
@@ -146,6 +161,7 @@ local flag_l12=false
 local flag_l12p=false
 local flag_pc=false
 local flag_pd=false
+local flag_pr=false
 local flag_pv=false
 local flag_v=false
 local flag_rt=false
@@ -247,8 +263,11 @@ while [[ $# -gt 0 ]]; do
     -pc|--power-cycle)
       flag_pc='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
-    -pd|--power-drain)
+    -pd|-vac|--vac|--power-drain)
       flag_pd='true'; optionsCounter=$(( optionsCounter + 1 ))
+      ;;
+    -pr|--power-reset)
+      flag_pr='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -rt|--retry|--send-back)
       flag_rt='true'; optionsCounter=$(( optionsCounter + 1 ))
@@ -323,16 +342,51 @@ typeset -U positionalArgs
 
 if [[ "$flag_s" == 'true' ]]; then
 
-  for i in ${positionalArgs[@]}; do
 
     if [[ "$flag_pv" == 'true' ]]; then
 
-      gbx_provision $i
+      for i in ${positionalArgs[@]}; do
+        gbx_provision $i
+      done
+      return 0
+
+    elif [[ "$flag_l12s" == 'true' ]]; then
+
+      for i in ${positionalArgs[@]}; do
+        gbx_hpcverf $i -s l12-seatrial -m 'sending node to l12-seatrial'
+      done
+      return 0
+
+    elif [[ "$flag_l12" == 'true' ]]; then
+
+      for i in ${positionalArgs[@]}; do
+        gbx_hpcverf $i -s l12-test -m 'sending node to l12-test'
+      done
+      return 0
+
+    elif [[ "$flag_pc" == 'true' ]]; then
+
+      for i in ${positionalArgs[@]}; do
+        node_oneoff -w instant-power-cycle -m 'issuing one-off power-cycle on node' $i
+      done
+      return 0
+
+    elif [[ "$flag_pd" == 'true' ]]; then
+
+      for i in ${positionalArgs[@]}; do
+        node_oneoff -w instant-power-drain -m 'issuing one-off power-drain on node' $i
+      done
+      return 0
+
+    elif [[ "$flag_pr" == 'true' ]]; then
+
+      for i in ${positionalArgs[@]}; do
+        node_oneoff -w instant-power-reset -m 'issuing one-off power-reset on node' $i
+      done
+      return 0
 
     fi
-    return 0
 
-  done
 
 fi
 
