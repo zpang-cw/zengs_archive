@@ -22,6 +22,7 @@ vackjra [-h|--help] [-s|--send] <workflow_steps> [-f|--failed] <failed_steps> [-
 
 [WORKFLOW STATES]
 
+-bc | --broken-collect
 -nv | --node-vaultify
 -nz | --node-zap
 -dv | --dpu-vaultify
@@ -37,10 +38,13 @@ vackjra [-h|--help] [-s|--send] <workflow_steps> [-f|--failed] <failed_steps> [-
 -l12s | --l12-seatrial
 -l12 | --l12-test
 -l12p | --l12-test-loop
+-on | --power-on
+-off | --power-off
 -pc | --power-cycle
 -pr | --power-reset
 -pd | -vac | --power-drain
 -pv | --provision
+-tg | -trg | --triage
 
 
 [EXAMPLES]
@@ -115,6 +119,21 @@ confirm() {
 
 }
 
+# FUNCTION FOR CUSTOM USER MESSAGE
+mconfirm() {
+
+  stateMessage=''
+  echo '[CHECK-POINT] Please enter state change reason/message :)'
+  read -r stateMessage < /dev/tty
+
+  if [[ -z $stateMessage ]];
+  then
+    echo '[ERROR] No messages given!'
+    return 1
+  fi
+
+}
+
 # FUNCTION AS SHORT-HAND GBX FLCC PROVISION WORKFLOW
 gbx_provision() {
 
@@ -137,7 +156,9 @@ node_oneoff() {
 }
 
 # VAR DECLARATIONS
+export TZ=UTC
 local flag_b=false
+local flag_bc=false
 local flag_nv=false
 local flag_cdu=false
 local flag_ps=false
@@ -159,6 +180,8 @@ local flag_l11=false
 local flag_l12s=false
 local flag_l12=false
 local flag_l12p=false
+local flag_on=false
+local flag_off=false
 local flag_pc=false
 local flag_pd=false
 local flag_pr=false
@@ -170,6 +193,7 @@ local flag_rtpd=false
 local flag_dr=false
 local flag_h=false
 local flag_s=false
+local flag_tg=false
 local positionalArgs=()
 local optionsCounter=0
 
@@ -190,6 +214,9 @@ while [[ $# -gt 0 ]]; do
 
     -b|--bmn|--bmns)
       flag_b='true'; optionsCounter=$(( optionsCounter + 1 ))
+      ;;
+    -bc|--broken-collect)
+      flag_bc='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -nv|--nvlink|--nvlinks)
       flag_nv='true'; optionsCounter=$(( optionsCounter + 1 ))
@@ -260,6 +287,12 @@ while [[ $# -gt 0 ]]; do
     -l12p|-ll2-test-loop|--l12-test-loop) 
       flag_l12p='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
+    -on|--power-on)
+      flag_on='true'; optionsCounter=$(( optionsCounter + 1 ))
+      ;;
+    -off|--power-off)
+      flag_off='true'; optionsCounter=$(( optionsCounter + 1 ))
+      ;;
     -pc|--power-cycle)
       flag_pc='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
@@ -277,6 +310,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     -rtpd|--retry-by-powerdrain)
       flag_rtpd='true'; optionsCounter=$(( optionsCounter + 1 ))
+      ;;
+    -tg|-trg|--triage)
+      flag_tg='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
     -dr|--dryrun)
       flag_dr='true'; optionsCounter=$(( optionsCounter + 1 ))
@@ -350,6 +386,28 @@ if [[ "$flag_s" == 'true' ]]; then
       done
       return 0
 
+    elif [[ "$flag_nz" == 'true' ]]; then
+
+      gbx_provision -s node-zap -m "$(date '+%Y-%d-%m-%H-%M-%S %Z') - sending node to node-zap" ${positionalArgs[*]}
+      return 0
+
+    elif [[ "$flag_dz" == 'true' ]]; then
+
+      for i in ${positionalArgs[@]}; do
+        gbx_provision $i -s dpu-zap -m 'sending node to dpu-zap'
+      done
+      return 0
+
+    elif [[ "$flag_l10" == 'true' ]]; then
+
+      gbx_provision -s l10-test -m 'sending node to l10-test' ${positionalArgs[*]}
+      return 0
+
+    elif [[ "$flag_l10p" == 'true' ]]; then
+
+      gbx_provision -s l10-test-loop -m 'sending node to l10-test-loop' ${positionalArgs[*]}
+      return 0
+
     elif [[ "$flag_l12s" == 'true' ]]; then
 
       for i in ${positionalArgs[@]}; do
@@ -362,6 +420,21 @@ if [[ "$flag_s" == 'true' ]]; then
       for i in ${positionalArgs[@]}; do
         gbx_hpcverf $i -s l12-test -m 'sending node to l12-test'
       done
+      return 0
+
+    elif [[ "$flag_l12p" == 'true' ]]; then
+
+      gbx_hpcverf -s l12-test-loop -m "$(date '+%Y-%d-%m-%H-%M-%S %Z') - sending node to l12-test-loop" ${positionalArgs[*]}
+      return 0
+
+    elif [[ "$flag_on" == 'true' ]]; then
+
+      cwctl flcc node -w gb200-rack-power-on -m 'powering nodes on via gb200-rack-power-on' ${positionalArgs[*]}
+      return 0
+
+    elif [[ "$flag_off" == 'true' ]]; then
+
+      cwctl flcc node -w gb200-rack-power-off -m 'powering nodes off via gb200-rack-power-off' ${positionalArgs[*]}
       return 0
 
     elif [[ "$flag_pc" == 'true' ]]; then
@@ -383,6 +456,17 @@ if [[ "$flag_s" == 'true' ]]; then
       for i in ${positionalArgs[@]}; do
         node_oneoff -w instant-power-reset -m 'issuing one-off power-reset on node' $i
       done
+      return 0
+
+    elif [[ "$flag_tg" == 'true' ]]; then
+
+      mconfirm
+      cwctl flcc node -s triage -m "$(date '+%Y-%d-%m-%H-%M-%S %Z') - $stateMessage" ${positionalArgs[*]}
+      return 0
+
+    elif [[ "$flag_bc" == 'true' ]]; then
+
+      cwctl flcc node -w broken-collect -m "$(date '+%Y-%d-%m-%H-%M-%S %Z') - sending to RMA" ${positionalArgs[*]}
       return 0
 
     fi
