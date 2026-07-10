@@ -19,6 +19,8 @@ vackjra - a CLI tool purposed for sending/retrying bmn provisioning states acros
 
 vackjra [-h|--help] [-s|--send] <workflow_steps> [-f|--failed] <failed_steps> [-rt|--retry|-rtpc|--retry-by-powercycle|-rtpd|--retry-by-powerdrain] <rack0 .. rackN>
 
+[OPTIONS}
+-m | --message  - add custom message when sending node to flcc workflow steps
 
 [WORKFLOW STATES]
 
@@ -180,6 +182,7 @@ local flag_l11=false
 local flag_l12s=false
 local flag_l12=false
 local flag_l12p=false
+local flag_m=false
 local flag_on=false
 local flag_off=false
 local flag_pc=false
@@ -317,6 +320,9 @@ while [[ $# -gt 0 ]]; do
     -dr|--dryrun)
       flag_dr='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
+    -m|--message)
+      flag_m='true'; optionsCounter=$(( optionsCounter + 1 ))
+      ;;
     -v|--verbose)
       flag_v='true'; optionsCounter=$(( optionsCounter + 1 ))
       ;;
@@ -382,7 +388,7 @@ if [[ "$flag_s" == 'true' ]]; then
     if [[ "$flag_pv" == 'true' ]]; then
 
       for i in ${positionalArgs[@]}; do
-        gbx_provision $i
+        gbx_provision $i -m "$(date '+%Y-%d-%m-%H-%M-%S %Z') - starting provisioning workflow on node"
       done
       return 0
 
@@ -398,6 +404,11 @@ if [[ "$flag_s" == 'true' ]]; then
       done
       return 0
 
+    elif [[ "$flag_fd" == 'true' ]]; then
+
+      gbx_provision -s fielddiag -m "$(date '+%Y-%d-%m-%H-%M-%S %Z') - sending node to fielddiag" ${positionalArgs[*]}
+      return 0
+
     elif [[ "$flag_l10" == 'true' ]]; then
 
       gbx_provision -s l10-test -m 'sending node to l10-test' ${positionalArgs[*]}
@@ -410,9 +421,7 @@ if [[ "$flag_s" == 'true' ]]; then
 
     elif [[ "$flag_l12s" == 'true' ]]; then
 
-      for i in ${positionalArgs[@]}; do
-        gbx_hpcverf $i -s l12-seatrial -m 'sending node to l12-seatrial'
-      done
+      gbx_hpcverf -s l12-seatrial -m "$(date '+%Y-%d-%m-%H-%M-%S %Z') - sending node to l12-seatrial" ${positionalArgs[@]}
       return 0
 
     elif [[ "$flag_l12" == 'true' ]]; then
@@ -439,17 +448,21 @@ if [[ "$flag_s" == 'true' ]]; then
 
     elif [[ "$flag_pc" == 'true' ]]; then
 
-      for i in ${positionalArgs[@]}; do
-        node_oneoff -w instant-power-cycle -m 'issuing one-off power-cycle on node' $i
-      done
+      node_oneoff -w instant-power-cycle -m "$(date '+%Y-%d-%m-%H-%M-%S %Z') - issuing one-off power-cycle on nodes" ${positionalArgs[*]}
       return 0
 
     elif [[ "$flag_pd" == 'true' ]]; then
 
-      for i in ${positionalArgs[@]}; do
-        node_oneoff -w instant-power-drain -m 'issuing one-off power-drain on node' $i
-      done
-      return 0
+      if [[ "$flag_m" == 'true' ]]; then
+        for i in ${positionalArgs[@]}; do
+          mconfirm
+          node_oneoff -w instant-power-drain -m "$(date '+%Y-%d-%m-%H-%M-%S %Z') - $stateMessage" $i
+        done
+        return 0
+      else
+        node_oneoff -w instant-power-drain -m "$(date '+%Y-%d-%m-%H-%M-%S %Z') - issuing one-off power-drain on nodes" ${positionalArgs[*]}
+        return 0
+      fi
 
     elif [[ "$flag_pr" == 'true' ]]; then
 
@@ -624,7 +637,7 @@ if [[ "$flag_f" == 'true' ]]; then
     elif [[ "$flag_l12s" == 'true' ]]; then
 
       if [[ "$flag_rt" == 'true' ]]; then
-        bmn_query $i | awk '$9 == "l12-seatrial" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-seatrial
+        bmn_query $i | awk '$9 == "l12-seatrial" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-seatrial -m "$(date '+%Y-%d-%m-%H-%M-%S %Z') - sending back to l12-seatrial"
 
       else
         bmn_query $i | awk '$9 == "l12-seatrial" && $10 == "fail" {print $0}'
@@ -650,7 +663,7 @@ if [[ "$flag_f" == 'true' ]]; then
     elif [[ "$flag_l12p" == 'true' ]]; then
 
       if [[ "$flag_rt" == 'true' ]]; then
-        bmn_query $i | awk '$9 == "l12-test-loop" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-test-loop
+        bmn_query $i | awk '$9 == "l12-test-loop" && $10 == "fail" {print $1}' | tr '\n' ' ' | xargs cwctl flcc node -w gb200-rack-hpc-verification-v4 -s l12-test-loop -m "$(date '+%Y-%d-%m-%H-%M-%S %Z') - sending back to l12-test-loop"
 
       elif [[ "$flag_rtpc" == 'true' ]]; then
         bmn_query $i | awk '$9 == "l12-test-loop" && $10 == "fail" {print $1}' | while read -r line; do bmn_pc $line; done
