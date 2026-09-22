@@ -1,0 +1,46 @@
+
+set -euo pipefail
+
+# EXAMPLES
+#
+# LIST NODES W/O ACTIVE ALERTS
+#
+#   node_alerts <bmn1..bmnN> |  jq -sr '.[] | to_entries[] | select((.value.alert_count | tonumber) == 0) | .key'
+#   
+#   - OR -
+#
+#   node_alerts <bmn1..bmnN> |  jq -sr '.[] | to_entries[] | select(.value.alert_count == 0) | .key' | tr '\n' ' '
+
+if [ $# -lt 1 ]; then
+
+  echo '[Error]: no inputs given!'
+  echo '[Usage]: node_alerts <bmn1..bmnN>'
+  exit 1
+
+fi
+
+
+for i in "$@"; do
+
+  curl -sS --get  -H "Authorization: Bearer $GRAFANA_TOKEN" --data-urlencode "query=ALERTS{alertstate=~\"firing|pending\", bmn=\"${i}\"}" "https://grafana.int.coreweave.com/api/datasources/proxy/uid/P546B13C064491369/api/v1/query" |
+
+  jq --arg bmn "$i" '
+
+      (.data.result // []) as $alertNum |
+      {
+
+        ($bmn): {
+        alert_count: (
+          if ($alertNum | length) == 0
+            then 0
+          else
+            (.stats.seriesFetched // 0)
+          end
+        ),
+        alerts: (.data.result // [] | map({ alertname: .metric.alertname, severity: .metric.severity }) )
+      }
+      }
+
+  '
+
+done
